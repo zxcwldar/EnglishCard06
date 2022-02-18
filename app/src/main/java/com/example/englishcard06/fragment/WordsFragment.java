@@ -4,9 +4,13 @@ import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import android.os.Handler;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -18,6 +22,7 @@ import com.example.englishcard06.base.BaseFragment;
 import com.example.englishcard06.databinding.FragmentWordsBinding;
 import com.example.englishcard06.network.model.Hits;
 import com.example.englishcard06.network.model.PixabayResponce;
+import com.example.englishcard06.viewmodel.PixaBayViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +33,9 @@ import retrofit2.Response;
 
 public class WordsFragment extends BaseFragment<FragmentWordsBinding> {
     private AdapterWords adapterWords;
-    private LinearLayoutManager linearLayout = new LinearLayoutManager(getContext());
+    PixaBayViewModel viewModel;
+    private Handler handler;
+
 
     @Override
     public FragmentWordsBinding bind() {
@@ -38,33 +45,55 @@ public class WordsFragment extends BaseFragment<FragmentWordsBinding> {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        binding.recyclerWords.setLayoutManager(linearLayout);
-        adapterWords = new AdapterWords();
-        getImages();
+        viewModel = new ViewModelProvider(this).get(PixaBayViewModel.class);
+        initAdapter();
+        listener();
     }
 
 
-    private void getImages() {
-        String word = binding.wordsEt.getText().toString();
-        App.retrofitClient.providePixabayApi().getImages("25677632-bbb6922cae47b99f5d2f289c0", word)
-                .enqueue(new Callback<PixabayResponce>() {
+    private void listener() {
+        binding.edWords.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                if (handler != null){
+                    handler= null;
+                }
+
+            }
+
+            @Override
+            public void afterTextChanged(  Editable editable) {
+                handler = new Handler();
+                handler.postDelayed(new Runnable() {
                     @Override
-                    public void onResponse(Call<PixabayResponce> call, Response<PixabayResponce> response) {
-                        if (response.isSuccessful()) {
-                            adapterWords.setList((ArrayList<Hits>) response.body().getHits());
-                            binding.recyclerWords.setAdapter(adapterWords);
-                            Log.e("ololo", "" + response.body());
-
-                        }
+                    public void run() {
+                        binding.progressBar.setVisibility(View.VISIBLE);
+                        viewModel.getImages(binding.edWords.getText().toString()).observe(getViewLifecycleOwner(), hits -> {
+                            if (hits != null) {
+                                binding.progressBar.setVisibility(View.GONE);
+                                binding.recyclerView.setAdapter(adapterWords);
+                                adapterWords.setData((ArrayList<Hits>) hits);
+                            }
+                        });
                     }
-
-                    @Override
-                    public void onFailure(Call<PixabayResponce> call, Throwable t) {
-                        Log.e("ololo", t.getMessage());
-
-                    }
-                });
-
+                }, 2000);
+            }
+        });
     }
 
+
+    private void initAdapter() {
+        adapterWords= new AdapterWords();
+    }
+
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        binding= null;
+    }
 }

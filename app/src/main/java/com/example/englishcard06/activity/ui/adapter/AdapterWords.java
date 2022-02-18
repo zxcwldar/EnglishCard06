@@ -15,7 +15,7 @@ import java.util.List;
 
 public class AdapterWords extends RecyclerView.Adapter<AdapterWords.HolderWords> {
     private ItemWordsBinding binding;
-    List<Hits> list = new ArrayList<>();
+    ArrayList<Hits> list = new ArrayList<>();
 
 
     @NonNull
@@ -36,8 +36,9 @@ public class AdapterWords extends RecyclerView.Adapter<AdapterWords.HolderWords>
         return list.size();
     }
 
-    public void setList(List<Hits> list) {
+    public void setData(ArrayList<Hits> list) {
         this.list = list;
+        notifyDataSetChanged();
     }
 
     public class HolderWords extends RecyclerView.ViewHolder {
